@@ -1,0 +1,101 @@
+---
+format: revealjs
+editor: visual
+---
+
+# Workflows as part of reproducible and replicable science
+
+Mark Adams, The University of Edinburgh\
+Tech Talk, 13 Aug 2024
+
+✉️ `mark.adams@ed.uk` 🐘@markjamesadams`@genomic.social` 🦋`@markjamesadams.bsky.social` 𝕏`@mja`
+
+## A workflow is a graph
+
+```{mermaid}
+flowchart LR
+  D[Data] --> T[[Computation]]
+  C{{Code}} --> T
+  T --> R{Results}
+```
+
+# 
+
+Example: Multi-ancestry genetic association study (UK Biobank, AllofUs, etc)
+
+```{mermaid}
+flowchart LR
+  ANC[(Ancestry clusters)]
+  ANC --> AFR[Cluster 1] --> KEEP_AFR[[Genotype QC]] --> STEP1_AFR[[Genome regression]] --> STEP2_AFR[[Genome association]]
+  ANC --> EAS[Cluster 2] --> KEEP_EAS[[Genotype QC]] --> STEP1_EAS[[Genome regression]] --> STEP2_EAS[[Genome association]]
+  ANC --> EUR[Cluster 3] --> KEEP_EUR[[Genotype QC]] --> STEP1_EUR[[Genome regression]] --> STEP2_EUR[[Genome association]]
+
+  
+  BFILE[(Genotype array)]
+  BFILE --> KEEP_AFR
+  BFILE --> KEEP_EAS
+  BFILE --> KEEP_EUR
+  
+  P[(Phenotypes and covariates)]
+  P --> STEP1_AFR
+  P --> STEP1_EAS
+  P --> STEP1_EUR
+  
+  
+  PFILE[(Imputed genotypes)]
+  
+  P --> STEP2_AFR
+  PFILE --> STEP2_AFR
+  STEP2_AFR -. 1-22,X .-> STEP2_AFR
+  
+  P --> STEP2_EAS
+  PFILE --> STEP2_EAS
+  STEP2_EAS -. 1-22,X .-> STEP2_EAS
+  
+  P --> STEP2_EUR
+  PFILE --> STEP2_EUR
+  STEP2_EUR -. 1-22,X .-> STEP2_EUR
+  
+  META[[Meta-analysis]]
+  STEP2_AFR --> META
+  STEP2_EAS --> META
+  STEP2_EUR --> META
+```
+
+# 
+
+## Inputs
+
+```groovy
+params.bt = null // binary phenotypes file
+params.qt = null // quantitative phenotypes file 
+params.keep = "rf_hgdp1kg_clusters.keep"
+params.remove = "PGC.remove"
+params.bfile = "autosome.{bed,bim,fam}"
+params.pfile = "ukb_imp_v3.qc.{pgen,psam,pvar}"
+params.clusters = "ukb_randomforest_clusters.tsv"
+params.covar = "ukb_randomforest_clusters.covar"
+params.covar_list = "PC1,PC2,PC3,PC4,PC5,PC6"
+params.covar_cat_list = "sex,genotyping"
+params.min_cases = 80
+```
+
+#
+
+### Parse inputs from CSV/TSV file
+
+```groovy
+// genetic similarity clusters
+	CLUSTERS_CH = Channel
+		.fromPath(params.clusters, checkIfExists: true)
+		
+// parse cluster file to get names of each cluster
+CLUSTER_NAMES_CH = CLUSTERS_CH
+		.splitCsv(sep: "\t", skip: 1, header: ['fid', 'iid', 'cluster'])
+		.map { it -> it.cluster }
+		.unique()
+```
+
+- `splitCsv()`: parse delimited file. Each row becomes an item.
+- `map()`: get value of `cluster` column for each item.
+- `unique()` output unique items.
