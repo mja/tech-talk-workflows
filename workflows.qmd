@@ -15,6 +15,8 @@ Tech Talk, 13 Aug 2024
 
 ---
 
+## The "-ables" of workflows
+
 ::: {.incremental}
 
 - **reproducible**: same data and same code produce the same results
@@ -22,6 +24,7 @@ Tech Talk, 13 Aug 2024
 - **scalable**: some code runs with more data and more resources
 
 :::
+
 ## A workflow is a graph
 
 ```{mermaid}
@@ -30,6 +33,17 @@ flowchart LR
   C{{Code}} --> T
   T --> R{Results}
 ```
+
+## A workflow is a graph
+
+```{mermaid}
+flowchart LR
+  D[Data] --> T[[Computation 1]]
+  C{{Code 1}} --> T
+  T --> T2[[Computation 2]] --> R{Results}
+  C2{{Code 2}} --> T2
+```
+
 
 
 # Examples
