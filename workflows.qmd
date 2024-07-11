@@ -3,7 +3,6 @@ format: revealjs
 ---
 
 ## Workflows for reproducible, replicable, scalable science
-<!-- # Workflows as part of reproducible and replicable science -->
 
 Mark Adams, The University of Edinburgh\
 Tech Talk, 13 Aug 2024
@@ -25,6 +24,8 @@ Tech Talk, 13 Aug 2024
 
 :::
 
+---
+
 ## A workflow is a graph
 
 ```{mermaid}
@@ -33,6 +34,8 @@ flowchart LR
   C{{Code}} --> T
   T --> R{Results}
 ```
+
+---
 
 ## A workflow is a graph
 
@@ -44,7 +47,21 @@ flowchart LR
   C2{{Code 2}} --> T2
 ```
 
+---
 
+## A workflow is a build system
+
+```sh
+document.qmd
+presentation.qmd
+workflows.qmd
+
+for QMD in *.qmd; do
+  quarto render $QMD
+done
+```
+
+---
 
 # Examples
 
