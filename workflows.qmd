@@ -51,15 +51,66 @@ flowchart LR
 
 ## A workflow is a build system
 
+Collection of notebooks.
+```
+document.qmd    presentation.qmd    workflows.qmd
+```
+  
+Render them in a loop.
 ```sh
-document.qmd
-presentation.qmd
-workflows.qmd
-
 for QMD in *.qmd; do
   quarto render $QMD
 done
 ```
+
+---
+
+## Keep it DRY
+
+Only render the notebook if the HTML doesn't exist or the notebook is newer.
+
+```sh
+for QMD in *.qmd; do
+  PREFIX=$(basename $QMD .qmd)
+  if [ ! -e ${PREFIX}.html ] || [ ${PREFIX}.qmd -nt ${PREFIX}.html ]; then
+    quarto render $QMD
+  fi
+done
+```
+
+---
+
+## Makefiles[^1]
+
+GNU Make: a tool for building programs from source code.
+
+`Makefile` with one rule:
+```
+workflows:
+	quarto render workflows.qmd
+```
+
+Run `make`
+```sh
+make workflows
+```
+
+[^1]: https://book.the-turing-way.org/reproducible-research/make
+
+---
+
+## Makefile pattern rules
+
+Pattern rule to render an HTML file from any Quarto notebook.
+
+```makefile
+%.html : %.qmd
+	quarto render $<
+
+all: workflows.html symposium.html thesis.html
+```
+
+`all` rule specifies the specific outputs to render.
 
 ---
 

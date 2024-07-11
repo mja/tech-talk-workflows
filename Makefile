@@ -4,4 +4,4 @@ workflows:
 %.html : %.qmd
 		quarto render $<
 
-all: workflows.html presentation.html document.html
+all: workflows.html symposium.html thesis.html
