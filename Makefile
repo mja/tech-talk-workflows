@@ -1,4 +1,4 @@
-workflows:
+workflows.html : workflows.qmd
 	quarto render workflows.qmd
 
 %.html : %.qmd

@@ -49,16 +49,33 @@ flowchart LR
 
 ---
 
+## A workflow is a graph
+
+```{mermaid}
+flowchart LR
+  D[Data] --> T[[Computation 1]]
+  C{{Code 1}} --> T
+  T --> T2[[Computation 2]] --> R{Results}
+  C2{{Code 2*}} --> T2
+  style C2 stroke:#f66,stroke-width:2px,stroke-dasharray: 5 5
+  style T2 stroke:#f66,stroke-width:2px,stroke-dasharray: 5 5
+  style R stroke:#f66,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+When inputs change, only re-compute descendent outputs.
+
+---
+
 ## A workflow is a build system
 
 Collection of notebooks.
-```
+```{.sh code-line-numbers="false"}
 document.qmd    presentation.qmd    workflows.qmd
 ```
   
 Render them in a loop.
-```sh
-for QMD in *.qmd; do
+```{.sh code-line-numbers="false"}
+$ for QMD in *.qmd; do
   quarto render $QMD
 done
 ```
@@ -69,8 +86,8 @@ done
 
 Only render the notebook if the HTML doesn't exist or the notebook is newer.
 
-```sh
-for QMD in *.qmd; do
+```{.sh code-line-numbers="false"}
+$ for QMD in *.qmd; do
   PREFIX=$(basename $QMD .qmd)
   if [ ! -e ${PREFIX}.html ] || [ ${PREFIX}.qmd -nt ${PREFIX}.html ]; then
     quarto render $QMD
@@ -84,26 +101,50 @@ done
 
 GNU Make: a tool for building programs from source code.
 
-`Makefile` with one rule:
+```makefile
+output : inputs
+  command
 ```
-workflows:
+
+Rules encode relationship between inputs ("depenencies") and outputs ("targets")
+
+[^1]: https://book.the-turing-way.org/reproducible-research/make
+
+---
+
+`Makefile` with one rule:
+```{.makefile filename="Makefile"}
+workflows.html : workflows.qmd
 	quarto render workflows.qmd
 ```
 
 Run `make`
-```sh
-make workflows
+```{.sh code-line-numbers="false"}
+$ make workflows.html
+
+quarto render workflows.qmd
+
+processing file: workflows.qmd
+1/3
+2/3 [unnamed-chunk-1]
+3/3
+output file: workflows.knit.md
+...
+Output created: workflows.html
 ```
 
-[^1]: https://book.the-turing-way.org/reproducible-research/make
+```{.sh code-line-numbers="false"}
+$ make workflows.html
 
+make: `workflows.html' is up to date.
+```
 ---
 
 ## Makefile pattern rules
 
 Pattern rule to render an HTML file from any Quarto notebook.
 
-```makefile
+```{.makefile filename="Makefile"}
 %.html : %.qmd
 	quarto render $<
 
@@ -111,6 +152,65 @@ all: workflows.html symposium.html thesis.html
 ```
 
 `all` rule specifies the specific outputs to render.
+
+---
+
+## Workflows are pipelines
+
+```{mermaid}
+flowchart LR
+  S1[[Step 1]] --> S2[[Step 2]] --> S3[[Step 3]]
+```
+
+Unix pipes
+```{.sh code-line-numbers="false"}
+bcftools view --targets-file targets.tsv dbsnp.v153.b37.vcf.gz |\
+bcftools query --print-header --format '%CHROM\t%POS\t%ID\t%REF\t%ALT{0}\n' |\
+gzip -c > chr_pos_rsid.tsv.gz
+```
+
+Sun Grid Engine dependencies
+```{.sh filename="step1.sh"}
+#$ -cwd
+command1 --in $1 --out $1.$JOB_NAME
+```
+```{.sh filename="step2.sh"}
+#$ -cwd
+command2 --in $1 --out $1.$JOB_NAME
+```
+
+```{.sh code-line-numbers="false"}
+$ qsub -N step1 step1.sh input1
+$ qsub -N step2 -hold_jid step1 step2.sh input1.step1
+```
+
+---
+
+
+## Workflows are parallelisable 
+
+```{mermaid}
+flowchart LR
+  S1[[Split]] --> S2[[Compute]] --> S3[[Combine]]
+  S1 --> S22[[Compute]] --> S3[[Combine]]
+  S1 --> S23[[Compute]] --> S3[[Combine]]
+  S1 --> S24[[Compute]] --> S3[[Combine]]
+  S1 --> S25[[Compute]] --> S3[[Combine]]
+```
+
+```{.sh code-line-numbers="false"}
+$ make all -j 3
+
+quarto render workflows.qmd
+quarto render symposium.qmd
+quarto render thesis.qmd
+```
+
+---
+
+## Limitations of Makefiles
+
+- 
 
 ---
 
@@ -163,7 +263,7 @@ flowchart LR
 
 ## Inputs
 
-```groovy
+```{.groovy filename="ukb-regenie-hrc.nf"}
 params.bt = null // binary phenotypes file
 params.qt = null // quantitative phenotypes file 
 params.keep = "rf_hgdp1kg_clusters.keep"
