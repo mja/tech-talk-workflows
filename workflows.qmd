@@ -76,8 +76,8 @@ document.qmd    presentation.qmd    workflows.qmd
 Render them in a loop.
 ```{.sh code-line-numbers="false"}
 $ for QMD in *.qmd; do
-  quarto render $QMD
-done
+    quarto render $QMD
+  done
 ```
 
 ---
@@ -88,11 +88,11 @@ Only render the notebook if the HTML doesn't exist or the notebook is newer.
 
 ```{.sh code-line-numbers="false"}
 $ for QMD in *.qmd; do
-  PREFIX=$(basename $QMD .qmd)
-  if [ ! -e ${PREFIX}.html ] || [ ${PREFIX}.qmd -nt ${PREFIX}.html ]; then
-    quarto render $QMD
-  fi
-done
+    PREFIX=$(basename $QMD .qmd)
+    if [ ! -e ${PREFIX}.html ] || [ ${PREFIX}.qmd -nt ${PREFIX}.html ]; then
+      quarto render $QMD
+    fi
+  done
 ```
 
 ---
@@ -169,19 +169,19 @@ bcftools query --print-header --format '%CHROM\t%POS\t%ID\t%REF\t%ALT{0}\n' |\
 gzip -c > chr_pos_rsid.tsv.gz
 ```
 
-Sun Grid Engine dependencies
+Scheduler (Sun Grid Engine) dependencies
 ```{.sh filename="step1.sh"}
 #$ -cwd
-command1 --in $1 --out $1.$JOB_NAME
+command1 --in $1 --out $2
 ```
 ```{.sh filename="step2.sh"}
 #$ -cwd
-command2 --in $1 --out $1.$JOB_NAME
+command2 --in $1 --out $2
 ```
 
 ```{.sh code-line-numbers="false"}
-$ qsub -N step1 step1.sh input1
-$ qsub -N step2 -hold_jid step1 step2.sh input1.step1
+$ qsub -N step1 step1.sh input1 output1
+$ qsub -N step2 -hold_jid step1 step2.sh output1 output2
 ```
 
 ---
@@ -210,7 +210,14 @@ quarto render thesis.qmd
 
 ## Limitations of Makefiles
 
-- 
+- No understanding of problem domain (need to run scripts, not just shell commands)
+- Not scalable (only executes on local machine, not via schedulers)
+- Limited parallelisation
+
+## Limitations of schedulers
+
+- Manually manage connecting outputs to next inputs
+- Not portable
 
 ---
 
