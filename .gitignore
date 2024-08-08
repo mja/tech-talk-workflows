@@ -1,2 +1,10 @@
 venv/
 *_files/
+.nextflow/
+.nextflow.log.*
+.snakemake/
+work/
+lv/
+inputs/
+pca/
+sim/

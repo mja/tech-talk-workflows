@@ -2,7 +2,7 @@
 format: revealjs
 ---
 
-## Workflows for reproducible, replicable, scalable science
+## Workflows for reproducible, replicable, and scalable science
 
 Mark Adams, The University of Edinburgh\
 Tech Talk, 13 Aug 2024
@@ -28,7 +28,7 @@ Tech Talk, 13 Aug 2024
 
 ## A workflow is a graph
 
-```{mermaid}
+```{mermaid graph}
 flowchart LR
   D[Data] --> T[[Computation]]
   C{{Code}} --> T
@@ -39,7 +39,7 @@ flowchart LR
 
 ## A workflow is a graph
 
-```{mermaid}
+```{mermaid graph2}
 flowchart LR
   D[Data] --> T[[Computation 1]]
   C{{Code 1}} --> T
@@ -51,7 +51,7 @@ flowchart LR
 
 ## A workflow is a graph
 
-```{mermaid}
+```{mermaid graph3}
 flowchart LR
   D[Data] --> T[[Computation 1]]
   C{{Code 1}} --> T
@@ -151,13 +151,13 @@ Pattern rule to render an HTML file from any Quarto notebook.
 all: workflows.html symposium.html thesis.html
 ```
 
-`all` rule specifies the specific outputs to render.
+`all` rule specifies the outputs to render.
 
 ---
 
 ## Workflows are pipelines
 
-```{mermaid}
+```{mermaid pipe}
 flowchart LR
   S1[[Step 1]] --> S2[[Step 2]] --> S3[[Step 3]]
 ```
@@ -189,7 +189,7 @@ $ qsub -N step2 -hold_jid step1 step2.sh output1 output2
 
 ## Workflows are parallelisable 
 
-```{mermaid}
+```{mermaid parallel}
 flowchart LR
   S1[[Split]] --> S2[[Compute]] --> S3[[Combine]]
   S1 --> S22[[Compute]] --> S3[[Combine]]
@@ -211,23 +211,345 @@ quarto render thesis.qmd
 ## Limitations of Makefiles
 
 - No understanding of problem domain (need to run scripts, not just shell commands)
-- Not scalable (only executes on local machine, not via schedulers)
+- Not scalable (only executes on local machine, not via HPC or cloud schedulers)
 - Limited parallelisation
 
 ## Limitations of schedulers
 
 - Manually manage connecting outputs to next inputs
-- Not portable
+- Not portable between HPC environments
+- Same workflow can't be developed and tested on your laptop
 
----
+# Workflow systems
+
+- Provide a language to describe the pipeline
+  - Declarative (CWL, WDL, Popper, Remake)
+  - General purpose imperative (SciPipe, Dask, targets)
+  - Domain specific imperative (bpipe, Snakemake, Nextflow)
+- Manage connections and caching of inputs to outputs
+- Hook into reproducible software environments (conda, Docker, Singularity)
+- Scale to available resources (CPU cores, cluster nodes)
+
+## Snakemake and Nextflow
+
+- Domain specific language (DSL)
+  - Snakemake: Python
+  - Nextflow: Groovy
+- Workflow paradigm
+  - Snakemake: **rules** determine required inputs from requested outputs
+  - Nextflow: **processes** produce outputs from given inputs
+- Each workflow step can be a shell command, a script (R, Python, Perl, Julia, etc), or native code [Python/Groovy]
+
+## Snakemake
+
+`Snakefile` for rendering a notebook.
+
+```{.python filename="Snakefile"}
+rule render:
+  input: "{notebook}.qmd"
+  output: "{notebook}.html"
+  shell: "quarto render {input}"
+```
+
+- `{notebook}` is an input/output wildcard.
+- in the shellc command, `{input}` is replaced with the value of `{notebook}.qmd`
+
+## Snakemake
+
+Ask Snakemake to produce the file `workflows.html`. Filename is matched to an output pattern, then built from the complementary input file.
+
+```{.sh code-line-numbers="false"}
+$ snakemake -j1 workflows.html
+
+Assuming unrestricted shared filesystem usage.
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job       count
+------  -------
+render        1
+total         1
+
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Aug  7 07:10:02 2024]
+localrule render:
+    input: workflows.qmd
+    output: workflows.html
+    jobid: 0
+    reason: Updated input files: workflows.qmd
+    wildcards: notebook=workflows
+    resources: tmpdir=/var/folders/hn/hmmp_m5n68l2fmjvlc7smwm00000gn/T
+
+...
+
+[Wed Aug  7 07:10:03 2024]
+Finished job 0.
+1 of 1 steps (100%) done
+Complete log: .snakemake/log/2024-08-08T115912.529645.snakemake.log
+```
+## Snakemake
+
+Rerun the workflow
+```{.sh code-line-numbers="false"}
+snakemake -j1 workflows.html
+
+Assuming unrestricted shared filesystem usage.
+Building DAG of jobs...
+Nothing to be done (all requested files are present and up to date).
+```
+
+## Snakemake
+
+Ask the workflow for multiple files.
+```{.sh code-line-numbers="false"}
+$ snakemake -j1 workflows.html symposium.html thesis.html
+
+Assuming unrestricted shared filesystem usage.
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job       count
+------  -------
+render        2
+total         2
+
+Select jobs to execute...
+Execute 2 jobs...
+```
+
+## Nextflow
+
+Pipeline is defined as channels that flow into and out of processes.
+
+```{.groovy filename="notebooks.nf"}
+params.notebook = "*.qmd"
+
+workflow {
+  QMD_CH = Channel.fromPath(params.notebook)
+  HTML_CH = RENDER(QMD_CH)
+}
+
+process RENDER {
+
+  publishDir "."
+
+  input:
+  path qmd
+
+  output:
+  path("${qmd.baseName}.html")
+
+  script:
+  """
+  quarto render ${qmd}
+  """
+}
+```
+
+## Nextflow
+
+Run workflow process by specifying the input parameters.
+```{.sh code-line-numbers="false"}
+$ nextflow run -resume notebooks.nf --notebook workflows.qmd
+
+N E X T F L O W  ~  version 22.10.6
+Launching `notebooks.nf` [lonely_jang] DSL2 - revision: 02a9f1b9b3
+executor >  local (1)
+[c8/e651a4] process > RENDER (1) [100%] 1 of 1 ✔
+```
+
+Rerun the workflow
+```{.sh code-line-numbers="false"}
+nextflow run -resume notebooks.nf --notebook workflows.qmd
+
+N E X T F L O W  ~  version 22.10.6
+Launching `notebooks.nf` [reverent_venter] DSL2 - revision: 02a9f1b9b3
+[c8/e651a4] process > RENDER (1) [100%] 1 of 1, cached: 1 ✔
+```
+
+## Nextflow
+
+Run workflow by specifying multiple files for the input parameter.
+```{.sh code-line-numbers="false"}
+$ nextflow run -resume notebooks.nf --notebook "{workflows,symposium,thesis}.qmd"
+
+N E X T F L O W  ~  version 22.10.6
+Launching `notebooks.nf` [pedantic_heisenberg] DSL2 - revision: 02a9f1b9b3
+executor >  local (2)
+[9e/fcbb56] process > RENDER (1) [100%] 3 of 3, cached: 1 ✔
+```
+
+# Working with scripts
+
+Example script that simulates a Lotka-Volterra model
+
+```{r lv}
+library(simecol)
+data(lv)
+plot(sim(lv))
+```
+
+## Snakemake
+
+```{.python filename="Snakefile"}
+rule lv:
+  output: "lv/prey{prey}-predator{pred}.png"
+  script: "scripts/lv.R"
+```
+
+Snakemake passes a special `snakemake` object to the script.
+```{.r filename="scripts/lv.R"}
+library(simecol)
+
+# parameterise simulation
+# get parameter values from file wildcards
+# prey and predator initial values
+data(lv)
+init(lv) <- c(prey = as.numeric(snakemake@wildcards$prey),
+              predator = as.numeric(snakemake@wildcards$pred))
+
+# run simulation
+simObj <- sim(lv)
+
+# make and save plot to specified output
+png(snakemake@output[[1]])
+plot(simObj)
+dev.off()
+```
+
+## Snakemake
+
+```{.sh code-line-numbers="false"}
+$ snakemake -j1 lv/prey0.5-predator1.0.png
+```
+
+![](lv/prey0.5-predator1.0.png)
+
+## Nextflow
+
+```{.groovy filename="lv.nf"}
+workflow {
+  PREY_CH = Channel.of(params.prey)
+  PRED_CH = Channel.of(params.pred)
+  LV(PREY_CH, PRED_CH)
+}
+
+process LV {
+
+  publishDir 'lv', mode: 'copy'
+
+  input:
+  val prey
+  val pred
+
+  output:
+  path("prey${prey}-pred${pred}.png")
+
+  script:
+  """
+  #!Rscript
+
+  library(simecol)
+
+  # parameterise simulation
+  data(lv)
+  init(lv) <- c(prey = ${prey},
+                predator = ${pred})
+
+  # run simulation
+  simObj <- sim(lv)
+
+  # make and save plot to output
+  png("prey${prey}-pred${pred}.png")
+  plot(simObj)
+  dev.off()
+  """
+}
+```
+
+# Working with resources
+
+```{.python filename="Snakefile"}
+# Simulate 100k genotypes for 2k samples
+rule simu:
+  output: multiext("sim/{bfile}", ".pgen", ".psam", ".pvar")
+  threads: 1
+  resources:
+    mem_mb=1000
+  shell: """
+  plink2 --dummy 2000 100000 --out sim/{wildcards.bfile} \
+  --threads {threads} --memory {resources.mem_mb}
+  """
+
+# run principal components analysis on genetic data
+rule pca:
+  input: multiext("sim/{bfile}", ".pgen", ".psam", ".pvar")
+  output: multiext("pca/{bfile}", ".eigenval", ".eigenvec")
+  threads: 4
+  resources:
+    mem_mb=8000
+  shell: """
+  plink2 --pfile sim/{wildcards.bfile} --pca \
+  --out pca/{wildcards.bfile} \
+  --threads {threads} --memory {resources.mem_mb}
+  """
+```
+
+--- 
+
+Generate and analyze 8 simulated datasets, utilising 12 cores (`-c12`)
+
+```{.sh code-line-numbers="false"}
+$ snakemake -c12 pca/sim-{1,2,3,4,5,6,7,8}.{eigenvec,eigenval}
+```
+
+Core occupancy over time
+```{r resources}
+library(ggplot2)
+
+df <- data.frame(
+  x = c(rep(0, 8), rep(2, 3), rep(5, 3), rep(8, 2)),
+  y = c(1:8, 2.5, 6.5, 10.5, 2.5, 6.5, 10.5, 2.5, 6.5),
+  
+  w = c(rep(0.7, 8), rep(2.75, 8)),
+  h = c(rep(0.7, 8), rep(3.75, 8)),
+
+  rule = c(rep("simu", 8), rep("pca", 8)),
+  Replicate = as.character(c(1:8, 1:8))
+)
+
+ggplot(df, aes(x = x, y = y, width = w, height = h, fill = rule)) +
+  geom_tile() +
+  geom_text(aes(label = Replicate)) +
+  scale_x_continuous("Time", breaks = 0:9) +
+  scale_y_continuous("Core", breaks = 1:12) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+```
+
+
+# Working with schedulers 
+
+Amazon Web Services, Azure, Google Cloud, HTCondor, Kubernetes, LSF, Torque, SGE, SLURM, etc
+
+- Snakemake:
+  - Profiles: `https://github.com/Snakemake-Profiles`
+  - Plugins: `https://snakemake.github.io/snakemake-plugin-catalog/`
+- Nextflow Executors: `https://www.nextflow.io/docs/latest/executor.html`
 
 # Examples
 
 ---
 
-## Multi-ancestry genetic association study (UK Biobank, AllofUs, etc)
+## Multi-ancestry genetic association study (UK Biobank, All of Us, etc)
 
-```{mermaid}
+```{mermaid cluster}
 flowchart LR
   ANC[(Ancestry clusters)]
   ANC --> AFR[Cluster 1] --> KEEP_AFR[[Genotype QC]] --> STEP1_AFR[[Genome regression]] --> STEP2_AFR[[Genome association]]
