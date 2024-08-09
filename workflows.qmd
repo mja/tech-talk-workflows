@@ -356,7 +356,7 @@ process RENDER {
 
 Run workflow process by specifying the input parameters.
 ```{.sh code-line-numbers="false"}
-$ nextflow run -resume notebooks.nf --notebook workflows.qmd
+$ nextflow run notebooks.nf --notebook workflows.qmd -resume
 
 N E X T F L O W  ~  version 22.10.6
 Launching `notebooks.nf` [lonely_jang] DSL2 - revision: 02a9f1b9b3
@@ -366,7 +366,7 @@ executor >  local (1)
 
 Rerun the workflow
 ```{.sh code-line-numbers="false"}
-nextflow run -resume notebooks.nf --notebook workflows.qmd
+nextflow run notebooks.nf --notebook workflows.qmd -resume
 
 N E X T F L O W  ~  version 22.10.6
 Launching `notebooks.nf` [reverent_venter] DSL2 - revision: 02a9f1b9b3
@@ -500,17 +500,51 @@ rule pca:
   --threads {threads} --memory {resources.mem_mb}
   """
 ```
+--- 
+
+Generate and analyze 8 simulated datasets, utilising **4** cores
+
+```{.sh code-line-numbers="false"}
+$ snakemake -c4 pca/sim-{1,2,3,4,5,6,7,8}.{eigenvec,eigenval}
+```
+
+Core occupancy over time
+```{r resources4}
+library(ggplot2)
+
+df <- data.frame(
+  x = c(rep(0, 4), rep(1, 4), 3, 6, 9),
+  y = c(1:4, 1:4, rep(2.5, 3)),
+  
+  w = c(rep(0.7, 8), rep(2.75, 3)),
+  h = c(rep(0.7, 8), rep(3.75, 3)),
+
+  rule = c(rep("simu", 8), rep("pca", 3)),
+  Replicate = as.character(c(1:8, 1:3))
+)
+
+ggplot(df, aes(x = x, y = y, width = w, height = h, fill = Replicate)) +
+  geom_tile() +
+  geom_text(aes(label = rule)) +
+  scale_x_continuous("Time", breaks = 0:9) +
+  scale_y_continuous("Core", breaks = 1:12) +
+  coord_cartesian(xlim=c(0, 9), ylim = c(1, 12)) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+```
+
+
 
 --- 
 
-Generate and analyze 8 simulated datasets, utilising 12 cores (`-c12`)
+Generate and analyze 8 simulated datasets, utilising **12** cores
 
 ```{.sh code-line-numbers="false"}
 $ snakemake -c12 pca/sim-{1,2,3,4,5,6,7,8}.{eigenvec,eigenval}
 ```
 
 Core occupancy over time
-```{r resources}
+```{r resources12}
 library(ggplot2)
 
 df <- data.frame(
@@ -524,30 +558,73 @@ df <- data.frame(
   Replicate = as.character(c(1:8, 1:8))
 )
 
-ggplot(df, aes(x = x, y = y, width = w, height = h, fill = rule)) +
+ggplot(df, aes(x = x, y = y, width = w, height = h, fill = Replicate)) +
   geom_tile() +
-  geom_text(aes(label = Replicate)) +
+  geom_text(aes(label = rule)) +
   scale_x_continuous("Time", breaks = 0:9) +
   scale_y_continuous("Core", breaks = 1:12) +
+  coord_cartesian(xlim=c(0, 9), ylim = c(1, 12)) +
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
 ```
 
 
-# Working with schedulers 
+## Working with schedulers 
 
 Amazon Web Services, Azure, Google Cloud, HTCondor, Kubernetes, LSF, Torque, SGE, SLURM, etc
 
 - Snakemake:
-  - Profiles: `https://github.com/Snakemake-Profiles`
-  - Plugins: `https://snakemake.github.io/snakemake-plugin-catalog/`
-- Nextflow Executors: `https://www.nextflow.io/docs/latest/executor.html`
+  - Profiles: https://github.com/Snakemake-Profiles
+  - Plugins: https://snakemake.github.io/snakemake-plugin-catalog/
+- Nextflow 
+  - Executors: https://www.nextflow.io/docs/latest/executor.html
+  - Institution cluster configs: https://github.com/nf-core/configs
+
+## Working with schedulers
+
+```{.sh code-line-numbers="false"}
+$ snakemake -j1 --profile sge pca/sim-{1,2,3,4,5,6,7,8}.{eigenvec,eigenval}
+
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cluster nodes: 100
+Job stats:
+job      count
+-----  -------
+pca          8
+simu         8
+total       16
+
+Select jobs to execute...
+```
+
+## Working with software environments
+
+Package managers, containers, and modules
+
+```{.python filename="Snakefile"}
+rule pca:
+  conda:
+    "envs/plink.yaml"
+  container:
+    "quay.io/biocontainers/plink2:2.00a2.3--hf22980b_0"
+  envmodule:
+    "igmm/apps/plink/2.00a3LM"
+```
+```{.yaml filename="envs/plink.yaml"}
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - plink2 =2.00a2.3
+```
+
 
 # Examples
 
 ---
 
-## Multi-ancestry genetic association study (UK Biobank, All of Us, etc)
+## Multi-ancestry genetic association study (UK Biobank, All of Us, etc) [Nextflow]
 
 ```{mermaid cluster}
 flowchart LR
@@ -610,10 +687,10 @@ params.min_cases = 80
 
 ### Parse inputs from CSV/TSV file
 
-```groovy
+```{.groovy filename="ukb-regenie-hrc.nf"}
 // genetic similarity clusters
-	CLUSTERS_CH = Channel
-		.fromPath(params.clusters, checkIfExists: true)
+CLUSTERS_CH = Channel
+  .fromPath(params.clusters, checkIfExists: true)
 		
 // parse cluster file to get names of each cluster
 CLUSTER_NAMES_CH = CLUSTERS_CH
@@ -627,3 +704,188 @@ CLUSTER_NAMES_CH = CLUSTERS_CH
 - `unique()` output unique items.
 
 ---
+
+### Perform genotype QC for each ancestry cluster
+
+```{.groovy filename="ukb-regenie-hrc.nf"}
+// Genotype QC
+BFILE_CLUSTERS_CH = BFILE_CH
+  .combine(KEEP_CH)
+  .combine(REMOVE_CH)
+  .combine(CLUSTERS_CH)
+  
+QC_CH = QC(BFILE_CLUSTERS_CH, CLUSTER_NAMES_CH)
+```
+
+
+```{.groovy filename="ukb-regenie-hrc.nf"}
+process QC {
+	tag "QCing genotypes ${cluster}"
+	
+	cpus = 1
+	memory = 16.GB
+	time = '1h'
+	
+	input:
+	tuple val(bfile), path(bedbimfam), path(keep), path(remove), path(clusters)
+	each cluster
+	
+	output:
+	tuple val(cluster), path("${cluster}.snplist"), path("${cluster}.id")
+```
+
+---
+
+### Prepend key to phenotype channels
+
+```{.groovy filename="ukb-regenie-hrc.nf"}
+// binary
+if(params.bt != null) {
+  BT_CH = Channel
+    .fromPath(params.bt, checkIfExists: true)
+    .map { it -> ["bt", it] }
+} else {
+  BT_CH = Channel.empty()
+}
+
+// quantitative
+if(params.qt != null) {
+  QT_CH = Channel
+    .fromPath(params.qt, checkIfExists: true)
+    .map { it -> ["qt", it] }
+} else {
+  QT_CH = Channel.empty()
+}
+```
+
+- `--bt mdd.pheno` → `["bt", "mdd.pheno"]`
+- `--qt body.pheno` → `["qt", "body.pheno"]`
+
+---
+
+### Specify different option flags for each phenotype
+
+```{.groovy filename="ukb-regenie-hrc.nf"}
+STEP1_FLAGS_CH = Channel
+  .of(["bt", "--bt --minCaseCount ${params.min_cases}"],
+    ["qt", ""]
+  )
+
+STEP2_FLAGS_CH = Channel
+  .of(["bt", "--bt --af-cc --firth --approx --pThresh 0.01 --minCaseCount ${params.min_cases}"],
+    ["qt", ""]
+  )
+
+FLAGS_CH = STEP1_FLAGS_CH
+  .join(STEP2_FLAGS_CH)
+  .map { it -> [ it[0], ["step1": it[1], "step2": it[2]] ] }
+```
+→
+```
+  [["bt"] ["step1": "--bt --minCaseCount 80", "step2": "--bt --af-cc --firth --approx --pThresh 0.01 --minCaseCount 80"]]
+  [["qt"] ["step1": "", "step2": ""]]
+```
+
+---
+
+### Combine phenotypes, program flags, and other input files
+
+```{.groovy filename="ukb-regenie-hrc.nf"}
+	PHENO_FLAGS_BFILE_CH = PHENO_COUNT_CH
+		.combine(FLAGS_CH, by: 0)
+		.combine(BFILE_CH)
+		.combine(QC_CH)
+		.combine(COVAR_CH)
+		.combine(COVAR_LIST_CH)
+		.combine(COVAR_CAT_LIST_CH)
+```
+
+---
+
+### Dynamic resource allocation
+
+Genome regression step
+```{.groovy filename="ukb-regenie-hrc.nf"}
+process STEP1 {
+	tag "${cluster}-${traits}-${pheno}"
+
+  // increase time on each attempt
+  // allocate 16GB of memory for each phenotype
+	cpus = 8
+	memory = { 8.GB + n_pheno * 16.GB }
+	time = { 6.hour * task.attempt }
+
+	input:
+	tuple val(cluster), val(traits), val(pheno), val(n_pheno), path(phenos), val(flags), val(bfile), path(bedbimfam), path(extract), path(keep), path(covar), val(covar_list), val(covar_cat_list)
+```
+
+---
+
+### Parallelise across chromsomes
+
+Genome association step, then merge
+```{.groovy filename="ukb-regenie-hrc.nf"}
+CHR_CH = Channel.of(1..23)
+STEP2_CH = STEP2(STEP1_FLAGS_PFILE_CH, CHR_CH)
+GWAS_CH = MERGE(STEP2_CH)
+```
+```{.groovy filename="ukb-regenie-hrc.nf"}
+process STEP2 {
+	tag "${cluster}-${traits}-${pheno}"
+	
+	cpus = 8
+	memory = 16.GB
+	time = '24h'
+
+	input:
+	tuple val(cluster), val(traits), val(pheno), path(phenos), val(flags), val(step1), path(loco), val(pfile), path(pgensamvar), path(covar), val(covar_list), val(covar_cat_list)
+	each chr
+	
+	output:
+	tuple val(cluster), val(traits), val(pheno), path("step2_${cluster}-${traits}-${pheno}_chr*.regenie"), path("step2_${cluster}-${traits}-${pheno}_chr*.log")
+```
+
+---
+
+### Multiple levels of paralellisation
+
+- Each input file can contain multiple phenotypes
+- Workflow accepts multiple phenotype files
+- Separate analysis for each ancestry cluster
+- Separate analysis for each chromosome
+- Regression/association steps run across multiple cores
+
+## Process UK Biobank release [Nextflow]
+
+Turns UKB release object into a DuckDB database  
+`https://github.com/mja/ukb-release-nf`
+
+```{.sh code-line-numbers="false"}
+$ nextflow run duckdb.nf -c custom.config -resume --enc ukb12345.enc --key k1234r12345.key
+```
+
+- Decrypts release file
+- Downloads data dictionary
+- Determines which fields are in the release file
+- Converts fields for each category
+- Processes fields through  R
+- Combines tables into SQL database
+
+## Major depressive disorder GWAS meta-analysis [Snakemake]
+
+From the Psychiatric Genomics Consortium  
+`https://github.com/psychiatric-genomics-consortium/mdd-wave3-meta`
+
+- Formats and QC dozens of GWAS files
+- Performs meta-analysis
+- Distributes results files to collaborators
+- Runs downstream analyses (finemapping, gene prioritisation)
+- Renders notebooks describing the results
+
+# Conclusions
+
+- Workflow as a record of analysis steps: **reproducibility**
+- Workflow as re-runnable pipeline: **replicability**
+- Workflow as a resource manager: **scalability**
+
+Code for this talk: `https://github.com/mja/tech-talk-workflows`
