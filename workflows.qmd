@@ -108,7 +108,7 @@ output : inputs
 
 Rules encode relationship between inputs ("depenencies") and outputs ("targets")
 
-[^1]: https://book.the-turing-way.org/reproducible-research/make
+[^1]: [book.the-turing-way.org/reproducible-research/make](https://book.the-turing-way.org/reproducible-research/make)
 
 ---
 
@@ -574,11 +574,11 @@ ggplot(df, aes(x = x, y = y, width = w, height = h, fill = Replicate)) +
 Amazon Web Services, Azure, Google Cloud, HTCondor, Kubernetes, LSF, Torque, SGE, SLURM, etc
 
 - Snakemake:
-  - Profiles: https://github.com/Snakemake-Profiles
-  - Plugins: https://snakemake.github.io/snakemake-plugin-catalog/
+  - Profiles: [github.com/Snakemake-Profiles](https://github.com/Snakemake-Profiles)
+  - Plugins: [snakemake.github.io/snakemake-plugin-catalog/](https://snakemake.github.io/snakemake-plugin-catalog/)
 - Nextflow 
-  - Executors: https://www.nextflow.io/docs/latest/executor.html
-  - Institution cluster configs: https://github.com/nf-core/configs
+  - Executors: [nextflow.io/docs/latest/executor.html](https://www.nextflow.io/docs/latest/executor.html)
+  - Institution cluster configs: [github.com/nf-core/configs](https://github.com/nf-core/configs)
 
 ## Working with schedulers
 
@@ -624,7 +624,7 @@ dependencies:
 
 ---
 
-## Multi-ancestry genetic association study (UK Biobank, All of Us, etc) [Nextflow]
+## Multi-ancestry genetic association study (UK Biobank, All of Us, etc)
 
 ```{mermaid cluster}
 flowchart LR
@@ -855,10 +855,10 @@ process STEP2 {
 - Separate analysis for each chromosome
 - Regression/association steps run across multiple cores
 
-## Process UK Biobank release [Nextflow]
+## Process UK Biobank release
 
 Turns UKB release object into a DuckDB database  
-`https://github.com/mja/ukb-release-nf`
+[github.com/mja/ukb-release-nf](https://github.com/mja/ukb-release-nf)
 
 ```{.sh code-line-numbers="false"}
 $ nextflow run duckdb.nf -c custom.config -resume --enc ukb12345.enc --key k1234r12345.key
@@ -871,10 +871,10 @@ $ nextflow run duckdb.nf -c custom.config -resume --enc ukb12345.enc --key k1234
 - Processes fields through  R
 - Combines tables into SQL database
 
-## Major depressive disorder GWAS meta-analysis [Snakemake]
+## Major depressive disorder GWAS meta-analysis
 
 From the Psychiatric Genomics Consortium  
-`https://github.com/psychiatric-genomics-consortium/mdd-wave3-meta`
+[github.com/psychiatric-genomics-consortium/mdd-wave3-meta](https://github.com/psychiatric-genomics-consortium/mdd-wave3-meta)
 
 - Formats and QC dozens of GWAS files
 - Performs meta-analysis
@@ -888,4 +888,4 @@ From the Psychiatric Genomics Consortium
 - Workflow as re-runnable pipeline: **replicability**
 - Workflow as a resource manager: **scalability**
 
-Code for this talk: `https://github.com/mja/tech-talk-workflows`
+Code for this talk: [github.com/mja/tech-talk-workflows](https://github.com/mja/tech-talk-workflows)
