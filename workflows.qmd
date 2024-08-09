@@ -21,6 +21,7 @@ Tech Talk, 13 Aug 2024
 - **reproducible**: same data and same code produce the same results
 - **replicable**: same code runs with different data
 - **scalable**: some code runs with more data and more resources
+- **portable**: same code runs in different compute environments
 
 :::
 
@@ -887,5 +888,6 @@ From the Psychiatric Genomics Consortium
 - Workflow as a record of analysis steps: **reproducibility**
 - Workflow as re-runnable pipeline: **replicability**
 - Workflow as a resource manager: **scalability**
+- Workflow as a compute environment: **portable**
 
 Code for this talk: [github.com/mja/tech-talk-workflows](https://github.com/mja/tech-talk-workflows)
