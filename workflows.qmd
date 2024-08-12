@@ -2,15 +2,15 @@
 format: revealjs
 ---
 
-## Workflows for reproducible, replicable, and scalable science
+## Workflows for reproducible, replicable, scalable, and portable science
 
 Mark Adams, The University of Edinburgh\
 Tech Talk, 13 Aug 2024
 
 ✉️ `mark.adams@ed.uk`  
-🐘`@markjamesadams@genomic.social`  
-🦋`@markjamesadams.bsky.social`  
-𝕏`@mja`
+🐘 `@`[`markjamesadams@genomic.social`](https://genomic.social/@markjamesadams)  
+🦋 `@`[`markjamesadams.bsky.social`](https://bsky.app/profile/markjamesadams.bsky.social)  
+𝕏 `@`[`mja`](https://x.com/mja)
 
 ---
 
@@ -71,7 +71,7 @@ When inputs change, only re-compute descendent outputs.
 
 Collection of notebooks.
 ```{.sh code-line-numbers="false"}
-document.qmd    presentation.qmd    workflows.qmd
+thesis.qmd    symposium.qmd    workflows.qmd
 ```
   
 Render them in a loop.
@@ -107,7 +107,7 @@ output : inputs
   command
 ```
 
-Rules encode relationship between inputs ("depenencies") and outputs ("targets")
+Rules encode relationship between inputs ("dependencies") and outputs ("targets")
 
 [^1]: [book.the-turing-way.org/reproducible-research/make](https://book.the-turing-way.org/reproducible-research/make)
 
@@ -253,7 +253,7 @@ rule render:
 ```
 
 - `{notebook}` is an input/output wildcard.
-- in the shellc command, `{input}` is replaced with the value of `{notebook}.qmd`
+- in the shell command, `{input}` is replaced with the value of `{notebook}.qmd`
 
 ## Snakemake
 
@@ -501,6 +501,7 @@ rule pca:
   --threads {threads} --memory {resources.mem_mb}
   """
 ```
+
 --- 
 
 Generate and analyze 8 simulated datasets, utilising **4** cores
@@ -886,8 +887,10 @@ From the Psychiatric Genomics Consortium
 # Conclusions
 
 - Workflow as a record of analysis steps: **reproducibility**
-- Workflow as re-runnable pipeline: **replicability**
+- Workflow as a re-runnable pipeline: **replicability**
 - Workflow as a resource manager: **scalability**
 - Workflow as a compute environment: **portable**
 
 Code for this talk: [github.com/mja/tech-talk-workflows](https://github.com/mja/tech-talk-workflows)
+
+List of pipeline frameworks: [github.com/pditommaso/awesome-pipeline](https://github.com/pditommaso/awesome-pipeline)
