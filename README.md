@@ -21,3 +21,13 @@ snakemake -j1 workflows.html
 ```sh
 nextflow run notebooks.nf --notebook workflows.qmd -resume
 ```
+
+## Requirements
+
+- R libraries:
+  - [ggplot2](https://ggplot2.tidyverse.org)
+  - [simecol](http://simecol.r-forge.r-project.org)
+- [Quarto](https://quarto.org)
+- [Snakemake](https://snakemake.github.io)
+- [Nextflow](https://www.nextflow.io)
+- [GNU Make](https://www.gnu.org/software/make/)
