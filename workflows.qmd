@@ -884,6 +884,32 @@ From the Psychiatric Genomics Consortium
 - Runs downstream analyses (finemapping, gene prioritisation)
 - Renders notebooks describing the results
 
+--- 
+
+### Determine inputs/outputs from configuration file
+
+```{.yaml filename="config.yaml"}
+sumstats:
+  daner_mdd_GenScot.eur.hg19.SCID_0721a: data/sumstats/daner_mdd_genscot.SCID_rmUKBB_2021-09a.gz
+  text_mdd_FinnGen.eur.hg38.R5_18032020: data/sumstats/Depressio_FinnGen_R5_18032020.txt.gz
+  text_mdd_UKBB.eur.hg19.MD_glm_202107:  data/sumstats/ukb_mdd.202107.md.eur.glm.logistic.gz
+```
+```{.yaml filename="meta.smk"}
+# Copy summary statistics listed in config.yaml under sumstats
+# with key FORMAT_COHORT.POP.hgNN.RELEASE
+rule stage_sumstats:
+	input: lambda wildcards: config["sumstats"][wildcards.cohort]
+	output: "resources/sumstats/{cohort}.gz"
+	log: "logs/sumstats/stage/{cohort}.log"
+	shell: "ln -sv {input} {output} > {log}"
+
+# Harmonize names of all summary statistics listed under sumstats in config.yaml
+rule sumstats:
+	input: expand("resources/sumstats/{sumstats}.gz", sumstats=config["sumstats"])
+```
+
+---
+
 # Conclusions
 
 - Workflow as a record of analysis steps: **reproducibility**
