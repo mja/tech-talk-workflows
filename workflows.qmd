@@ -245,7 +245,7 @@ quarto render thesis.qmd
 
 `Snakefile` for rendering a notebook.
 
-```{.python filename="Snakefile"}
+```{.python filename="Snakefile" code-line-numbers="|1|2|3|4|"}
 rule render:
   input: "{notebook}.qmd"
   output: "{notebook}.html"
@@ -328,7 +328,7 @@ Execute 2 jobs...
 
 Pipeline is defined as channels that flow into and out of processes.
 
-```{.groovy filename="notebooks.nf"}
+```{.groovy filename="notebooks.nf" code-line-numbers="|1|3-6|8-22|"}
 params.notebook = "*.qmd"
 
 workflow {
@@ -405,7 +405,7 @@ rule lv:
 ```
 
 Snakemake passes a special `snakemake` object to the script.
-```{.r filename="scripts/lv.R"}
+```{.r filename="scripts/lv.R" code-line-numbers="|7,8,14|"}
 library(simecol)
 
 # parameterise simulation
@@ -476,7 +476,7 @@ process LV {
 
 # Working with resources
 
-```{.python filename="Snakefile"}
+```{.python filename="Snakefile" code-line-numbers="|4-6,16-18|9,22|"}
 # Simulate 100k genotypes for 2k samples
 rule simu:
   output: multiext("sim/{bfile}", ".pgen", ".psam", ".pvar")
@@ -571,7 +571,7 @@ ggplot(df, aes(x = x, y = y, width = w, height = h, fill = Replicate)) +
 ```
 
 
-## Working with schedulers 
+# Working with schedulers 
 
 Amazon Web Services, Azure, Google Cloud, HTCondor, Kubernetes, LSF, Torque, SGE, SLURM, etc
 
@@ -823,7 +823,7 @@ process STEP1 {
 
 ---
 
-### Parallelise across chromsomes
+### Parallelise across chromosomes
 
 Genome association step, then merge
 ```{.groovy filename="ukb-regenie-hrc.nf"}
